@@ -1,212 +1,85 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from .forms import ProfileModelForm
-from .models import Profile, Relationship
-from django.views.generic import ListView, DetailView
+from django.http import JsonResponse
 from django.contrib.auth.models import User
-from django.db.models import Q
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.mixins import LoginRequiredMixin
+from profiles.models import Profile, Relationship
+from profiles.forms import ProfileModelForm
+
+from rest_framework.parsers import JSONParser
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework import generics, mixins
 
-# from .serializers import ProfileSerializer ,RelationshipSerializer
-from rest_framework import viewsets
-
-
-class ProfileListView(ListView, LoginRequiredMixin):
-    model = Profile
-    template_name = "profiles/profiles_list.html"
-    context_object_name = "qs"
-
-    def get_queryset(self):
-        user = self.request.user
-        queryset = Profile.objects.get_all_profiles(user)
-        return queryset
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        user = User.objects.get(username__iexact=self.request.user)
-        profile = Profile.objects.get(user=user)
-        rel_r = Relationship.objects.filter(sender=profile)
-        rel_s = Relationship.objects.filter(receiver=profile)
-
-        rel_receiver = []
-        rel_sender = []
-
-        for item in rel_r:
-            rel_receiver.append(item.receiver.user)
-
-        for item in rel_s:
-            rel_receiver.append(item.sender.user)
-
-        context["rel_receiver"] = rel_receiver
-        context["rel_sender"] = rel_sender
-        context["is_empty"] = False
-        # context['profile'] = profile
-        if len(self.get_queryset()) == 0:
-            context["is_empty"] = True
-
-        return context
+from profiles.serializers import ProfileSerializer
 
 
-@login_required
-@api_view(["GET", "POST", "HEAD"])
-def my_profile_view(request):
+class MyProfileView(APIView):
+    def get_object(self, user):
+        try:
+            return Profile.objects.get(user=self.request.user)
+        except Profile.objects.DoesNotExist:
+            return Response({"error": "The profile does not exist"}, status=404)
+
+    def get(self, request, user=None):
+        instance = self.get_object(user)
+        serializer = ProfileSerializer(instance)
+        return Response(serializer.data)
+
+
+@api_view(["GET", "POST"])
+def myprofile(request):
     profile = Profile.objects.get(user=request.user)
-    form = ProfileModelForm(request.POST, request.FILES or None, instance=profile)
     update_flag = False
 
     if request.method == "GET":
-        if form.is_valid():
-            form.save()
-            update_flag = True
-
-    context = {"profile": profile, "form": form, "update_flag": update_flag}
-    return render(request, "profiles/myprofile.html", context)
+        serializer = ProfileSerializer(profile)
+        return Response(serializer.data)
 
 
-@login_required
-@api_view(["GET", "POST", "HEAD"])
-def received_invites_view(request):
-    profile = Profile.objects.get(user=request.user)
-    qs = Relationship.objects.invitations_received(profile)
-    results = list(map(lambda x: x.sender, qs))
-    is_empty = False
+class ReceivedInvitesList(generics.GenericAPIView, mixins.ListModelMixin):
+    serializer_class = ProfileSerializer
 
-    if len(results) == 0:
-        is_empty = True
-
-    context = {
-        "qs": results,
-        "is_empty": is_empty,
-    }
-
-    return render(request, "profiles/received_invites.html", context)
-
-
-@login_required
-@api_view(["GET", "POST"])
-def profile_list_view(request):
-    myself = request.user
-    queryset = Profile.objects.get_all_profiles(myself)
-    results = list(map(lambda x: x.sender, queryset))
-    is_empty = False
-
-    if len(results) == 0:
-        is_empty = True
-
-    context = {
-        "qs": results,
-        "is_empty": is_empty,
-    }
-
-    return render(request, "profiles/profiles_list.html", context)
-
-
-@login_required
-@api_view(["GET", "POST", "HEAD"])
-def accept_invitation(request):
-    if request.method == "POST":
-        pk = request.POST.get("profile_pk")
-        sender = Profile.objects.get(pk=pk)
-        receiver = Profile.objects.get(user=request.user)
-        rel = get_object_or_404(Relationship, sender=sender, receiver=receiver)
-        if rel.status == "send":
-            rel.status = "accepted"
-            rel.save()
-    return redirect("profiles:my-invites-view")
-
-
-@login_required
-@api_view(["GET", "POST", "HEAD"])
-def reject_invitation(request):
-    if request.method == "POST":
-        pk = request.POST.get("profile_pk")
-        sender = Profile.objects.get(pk=pk)
-        receiver = Profile.objects.get(user=request.user)
-        rel = get_object_or_404(Relationship, sender=sender, receiver=receiver)
-        rel.delete()
-    return redirect("profiles:my-invites-view")
-
-
-@login_required
-@api_view(["GET", "POST", "HEAD"])
-def invite_profiles_list_view(request):
-    sender = request.user
-    qs = Profile.objects.get_all_profiles_to_invite(sender)
-
-    context = {"qs": qs}
-
-    return render(request, "profiles/to_invite_list.html", context)
-
-
-@login_required
-@api_view(["GET", "POST", "HEAD"])
-def send_invitation(request):
-    if request.method == "POST":
-        pk = request.POST.get("profile_pk")
-        user = request.user
-        sender = Profile.objects.get(user=user)
-        receiver = Profile.objects.get(pk=pk)
-        rel = Relationship.objects.create(
-            sender=sender, receiver=receiver, status="send"
-        )
-
-        rel.save()
-        return redirect(request.META.get("HTTP_REFERER"))
-    return redirect("profiles:my-profile-view")
-
-
-@login_required
-def remove_from_friends(request):
-    if request.method == "POST":
-        pk = request.POST.get("profile_pk")
-        user = request.user
-        sender = Profile.objects.get(user=user)
-        receiver = Profile.objects.get(pk=pk)
-
-        rel = Relationship.objects.get(
-            Q(sender=receiver) & Q(receiver=sender)
-            | Q(sender=sender) & Q(receiver=receiver)
-        )
-
-        rel.delete()
-
-        return redirect(request.META.get("HTTP_REFERER"))
-
-    return redirect("profiles:my-profile-view")
-
-
-class ProfileDetailView(LoginRequiredMixin, DetailView):
-    model = Profile
-    template_name = "profiles/detail.html"
-
-    def get_object(self):
-        slug = self.kwargs.get("slug")
-        profile = Profile.objects.get(slug=slug)
-        return profile
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
+    def get_queryset(self):
         profile = Profile.objects.get(user=self.request.user)
-        rel_r = Relationship.objects.filter(sender=profile)
-        rel_s = Relationship.objects.filter(receiver=profile)
+        queryset = Relationship.objects.invitations_received(profile)
+        return queryset
 
-        rel_receiver = []
-        rel_sender = []
+    def get(self, request):
+        return self.list(request)
 
-        for item in rel_r:
-            rel_receiver.append(item.receiver.user)
 
-        for item in rel_s:
-            rel_receiver.append(item.sender.user)
+class InvitesProfileList(generics.GenericAPIView, mixins.ListModelMixin):
+    serializer_class = ProfileSerializer
 
-        context["rel_receiver"] = rel_receiver
-        context["rel_sender"] = rel_sender
-        # context['is_empty'] = False
-        context["posts"] = self.get_object().get_all_author_posts()
-        context["no_of_posts"] = (
-            True if len(self.get_object().get_all_author_posts()) > 0 else False
-        )
+    def get_queryset(self):
+        sender = self.request.user
+        queryset = Profile.objects.get_all_profiles_to_invite(sender)
+        return queryset
 
-        return context
+    def get(self, request):
+        return self.list(request)
+
+
+class ProfileListView(
+    generics.GenericAPIView, mixins.ListModelMixin, mixins.CreateModelMixin
+):
+    serializer_class = ProfileSerializer
+
+    def get_queryset(self):
+        myself = self.request.user
+        qs = Profile.objects.get_all_profiles(myself)
+        return qs
+
+    def get(self, request):
+        return self.list(request)
+
+    def post(self, request):
+        return self.create(request)
+
+
+@api_view(["GET"])
+def received_invites_view(request):
+    # profile = Profile.objects.get(user=request.user)
+    # obj = Relationship.objects.invitations_received(profile)
+    obj = Relationship.objects.all()
+    serializer = ProfileSerializer(obj, many=True)
+    return Response(serializer.data)

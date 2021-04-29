@@ -18,7 +18,6 @@ from django.urls import path, include
 from django.conf.urls.static import static
 from django.conf import settings
 from .views import home_view
-from profiles.views import my_profile_view
 
 
 urlpatterns = [
@@ -26,7 +25,6 @@ urlpatterns = [
     path("accounts/", include("allauth.urls")),
     path("admin/", admin.site.urls),
     path("profiles/", include("profiles.urls")),
-    path("api/profiles/", include("profiles.profiles_api.urls")),
     path("posts/", include("posts.urls", namespace="posts")),
     path("api/posts/", include("posts.posts_api.urls")),
     path("groups/", include("groups.urls", namespace="groups")),
