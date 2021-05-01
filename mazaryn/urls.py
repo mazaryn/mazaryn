@@ -25,8 +25,7 @@ urlpatterns = [
     path("accounts/", include("allauth.urls")),
     path("admin/", admin.site.urls),
     path("profiles/", include("profiles.urls")),
-    path("posts/", include("posts.urls", namespace="posts")),
-    path("api/posts/", include("posts.posts_api.urls")),
+    path("posts/", include("posts.urls")),
     path("groups/", include("groups.urls", namespace="groups")),
 ]
 
