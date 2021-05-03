@@ -1,7 +1,6 @@
 from django.http import JsonResponse
 from django.contrib.auth.models import User
 from profiles.models import Profile, Relationship
-from profiles.forms import ProfileModelForm
 
 from rest_framework.parsers import JSONParser
 from rest_framework.decorators import api_view
