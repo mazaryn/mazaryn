@@ -1,14 +1,9 @@
-from django.http import JsonResponse
-from django.contrib.auth.models import User
 from profiles.models import Profile, Relationship
+from .serializers import ProfileSerializer
 
-from rest_framework.parsers import JSONParser
-from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import generics, mixins
-
-from profiles.serializers import ProfileSerializer
 
 
 class MyProfileView(APIView):
@@ -21,16 +16,6 @@ class MyProfileView(APIView):
     def get(self, request, user=None):
         instance = self.get_object(user)
         serializer = ProfileSerializer(instance)
-        return Response(serializer.data)
-
-
-@api_view(["GET", "POST"])
-def myprofile(request):
-    profile = Profile.objects.get(user=request.user)
-    update_flag = False
-
-    if request.method == "GET":
-        serializer = ProfileSerializer(profile)
         return Response(serializer.data)
 
 
@@ -73,12 +58,3 @@ class ProfileListView(
 
     def post(self, request):
         return self.create(request)
-
-
-@api_view(["GET"])
-def received_invites_view(request):
-    # profile = Profile.objects.get(user=request.user)
-    # obj = Relationship.objects.invitations_received(profile)
-    obj = Relationship.objects.all()
-    serializer = ProfileSerializer(obj, many=True)
-    return Response(serializer.data)

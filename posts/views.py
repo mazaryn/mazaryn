@@ -1,8 +1,7 @@
-from django.http import request
-from .serializers import PostSerializer
-from posts.models import Post, Comment, Like
+from .serializers import PostSerializer, CommentSerializer
+from .models import Post, Comment
+
 from rest_framework import viewsets
-from .serializers import CommentSerializer, PostSerializer
 from rest_framework.decorators import action
 from rest_framework.response import Response
 

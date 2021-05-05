@@ -1,10 +1,10 @@
-from django.urls import path
-from .views import GroupListView, PostUpdateView, PostDeleteView
+from django.urls import path, include
+from .views import *
+from rest_framework import routers, urlpatterns, views
 
-app_name = 'groups'
 
-urlpatterns = [
-    path('', GroupListView.as_view(), name='all-groups-view'),
-    path('<pk>/delete/', PostDeleteView.as_view(), name='group-post-delete'),
-    path('<pk>/update/', PostUpdateView.as_view(), name='group-post-update')
-]
+router = routers.DefaultRouter()
+
+router.register('groups', GroupViewSet)
+
+urlpatterns = router.urls

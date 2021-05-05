@@ -1,11 +1,11 @@
-from django.http import JsonResponse
-from groups.models import Group
 from groups.serializers import GroupSerializer
+from .models import Group
 
-from rest_framework.parsers import JSONParser
-from rest_framework.decorators import api_view
+from rest_framework import viewsets
 from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework import generics, mixins
+from rest_framework.decorators import action
 
-from groups.serializers import GroupSerializer
+
+class GroupViewSet(viewsets.ModelViewSet):
+    serializer_class = GroupSerializer
+    queryset = Group.objects.all()

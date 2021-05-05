@@ -26,7 +26,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("profiles/", include("profiles.urls")),
     path("posts/", include("posts.urls")),
-    path("groups/", include("groups.urls", namespace="groups")),
+    path("groups/", include("groups.urls")),
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
