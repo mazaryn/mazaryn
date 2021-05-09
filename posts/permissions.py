@@ -1,5 +1,11 @@
-from rest_framework import permissions
+from rest_access_policy import AccessPolicy
 
 
-class IsAuthorOrReadOnly():
-    pass
+class PostAccessPolicy(AccessPolicy):
+    statements = [
+        {
+            "action": ["list", "retrieve"],
+            "principal": "*",
+            "effect": "allow"
+        },
+    ]

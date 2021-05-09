@@ -1,8 +1,4 @@
 from django.db import models
-import profiles.models
-import posts.models
-
-# Create your models here.
 
 
 class Group(models.Model):

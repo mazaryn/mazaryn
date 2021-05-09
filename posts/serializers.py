@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from posts.models import Post, Comment, Like
+from posts.models import Post, Comment
+
 
 class CommentSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(required=False)
@@ -31,9 +32,9 @@ class PostSerializer(serializers.ModelSerializer):
             'comments'
         ]
         depth = 1
-    
+
     def create(self, validated_data):
-        comments =  validated_data.pop('comments')
+        comments = validated_data.pop('comments')
         question = Post.objects.create(**validated_data)
         for comment in comments:
             Comment.objects.create(**comment, question=question)

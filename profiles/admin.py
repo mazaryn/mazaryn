@@ -1,8 +1,6 @@
 from django.contrib import admin
 from .models import Profile, Relationship
 
-# Register your models here.
-
 
 @admin.register(Profile)
 class ProfileModel(admin.ModelAdmin):

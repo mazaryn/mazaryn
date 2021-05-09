@@ -1,5 +1,6 @@
 from .serializers import PostSerializer, CommentSerializer
 from .models import Post, Comment
+from .permissions import PostAccessPolicy
 
 from rest_framework import viewsets
 from rest_framework.decorators import action
@@ -7,6 +8,7 @@ from rest_framework.response import Response
 
 
 class PostViewSet(viewsets.ModelViewSet):
+    permission_classes = (PostAccessPolicy, )
     serializer_class = PostSerializer
     queryset = Post.objects.all()
     lookup_field = 'id'
